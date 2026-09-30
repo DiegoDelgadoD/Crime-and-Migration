@@ -1,0 +1,10 @@
+.claude/memory/
+.claude/settings.local.json
+
+# Data files over 50 MB stay out of git (GitHub rejects files over 100 MB).
+# Re-download from the URLs in data/SOURCES.md.
+data/SINADEF_DATOS_ABIERTOS.csv
+
+# Office lock files and Python cache
+~$*
+__pycache__/
