@@ -2,6 +2,11 @@
 
 Date: 2026-09-24. Prepared with Claude Code from five research agents (web searches in English and Spanish) and a first pass through the data in `data/`.
 
+**Errata (2026-09-29).** A full-text reading pass found errors in this report. The reading pass is documented in `2026-09-29_literature_review.md`, which supersedes section 2.
+- **Bahar, Ibáñez & Rozo (2021), *JDE* 151: 102652.** This citation belongs to a different paper, on the amnesty program itself. The crime-reports paper is Ibáñez, Rozo, Bahar & Urbina (2026), *JDE* 179: 103667. That paper's estimate for crimes committed by migrants is imprecise, with a first-stage F of 7.7–8.5.
+- **Spenkuch (2014).** The 0.12 figure is the all-immigrant OLS property elasticity. The Mexican fixed-effects OLS figure is 0.066.
+- **Marques (2025).** It could not be read in full, so its findings in section 2.2 are unverified.
+
 Citation status: every paper below was checked by a research agent against a publisher, RePEc/IDEAS, NBER or institutional page. The note after each entry says what the agent read: FT = full text or the relevant sections, AB = abstract, SN = search snippet only. Treat SN entries as unverified in content. Re-check page numbers before any citation goes into a paper.
 
 ---

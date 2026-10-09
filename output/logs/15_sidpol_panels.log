@@ -1,0 +1,421 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L15_sidpol_panels
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/15_sidpol_panels.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:54:04
+
+. *=====================================================================
+. * 15_sidpol_panels.do - SIDPOL police reports to district panels
+. *
+. * Input : $raw/sidpol/Base_datos_SIDPOL_diciembre_2025.xlsx
+. *           Temp5.2: year x month x district x modality (Estafa, Extorsión,
+. *                    Homicidio, Hurto, Robo, Otros), with DIST_EMERGENCIA
+. *           Temp6/Temp7: detailed modality, 2024 and 2025
+. *         $raw/sidpol/DATASET_Denuncias_Policiales_Ene_2018_a_Julio_2026.csv
+. *           (open-data series; used only for the comparison below)
+. * Output: $der/sidpol/sidpol_district_month.dta
+. *         $der/sidpol/sidpol_district_year.dta
+. *         $der/sidpol/sidpol_emergency_dm.dta
+. *         $der/sidpol/sidpol_modalities_2024_2025.dta
+. *         $der/sidpol/sidpol_xlsx_vs_csv.dta
+. *
+. * The xlsx is the analysis series. The CSV is a different extraction
+. * (analysis plan, missing data), so the comparison is reported, not
+. * asserted. 2025 counts use a new extraction with duplicate filtering
+. * (OBNASEC-INDAGA 2026, p. 67); break2025 flags those years.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. local xlsx "$raw/sidpol/Base_datos_SIDPOL_diciembre_2025.xlsx"
+
+. 
+. *---- Temp5.2: modalities by district-month ----------------------------
+. import excel using "`xlsx'", sheet("Temp5.2") firstrow clear allstring
+(9 vars, 251,315 obs)
+
+. rename (ANIO MES UBIGEO_HECHO P_MODALIDADES n_dist_ID_DGC DIST_EMERGENCIA) ///
+>     (year month ubigeo_raw modality n emerg)
+
+. destring year month n emerg, replace
+year: all characters numeric; replaced as int
+month: all characters numeric; replaced as byte
+n: all characters numeric; replaced as int
+emerg: all characters numeric; replaced as byte
+
+. fix_ubigeo ubigeo_raw, generate(ubigeo)
+(91,623 real changes made)
+
+. drop ubigeo_raw
+
+. normname modality, generate(mod)
+(18,107 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. tab mod
+
+                                    mod |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                                 ESTAFA |     28,258       11.24       11.24
+                              EXTORSION |     18,107        7.20       18.45
+                              HOMICIDIO |      8,246        3.28       21.73
+                                  HURTO |     62,904       25.03       46.76
+                                  OTROS |     92,847       36.94       83.70
+                                   ROBO |     40,953       16.30      100.00
+----------------------------------------+-----------------------------------
+                                  Total |    251,315      100.00
+
+. generate str10 y = ""
+(251,315 missing values generated)
+
+. replace y = "estafa"    if mod == "ESTAFA"
+(28,258 real changes made)
+
+. replace y = "extorsion" if mod == "EXTORSION"
+(18,107 real changes made)
+
+. replace y = "homicidio" if mod == "HOMICIDIO"
+(8,246 real changes made)
+
+. replace y = "hurto"     if mod == "HURTO"
+(62,904 real changes made)
+
+. replace y = "robo"      if mod == "ROBO"
+(40,953 real changes made)
+
+. replace y = "otros"     if mod == "OTROS"
+(92,847 real changes made)
+
+. assert y != ""
+
+. 
+. preserve
+
+. collapse (max) emerg, by(ubigeo year month)
+
+. isid ubigeo year month
+
+. save "$der/sidpol/sidpol_emergency_dm.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/sidpol/sidpol_emergency_dm.dta saved
+
+. restore
+
+. 
+. collapse (sum) n, by(ubigeo year month y)
+
+. reshape wide n, i(ubigeo year month) j(y) string
+(j = estafa extorsion homicidio hurto otros robo)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations          251,315   ->   101,301     
+Number of variables                   5   ->   9           
+j variable (6 values)                 y   ->   (dropped)
+xij variables:
+                                      n   ->   nestafa nextorsion ... nrobo
+-----------------------------------------------------------------------------
+
+. rename n* sid_*
+
+. foreach v of varlist sid_* {
+  2.     replace `v' = 0 if missing(`v')
+  3. }
+(73,043 real changes made)
+(83,194 real changes made)
+(93,055 real changes made)
+(38,397 real changes made)
+(8,454 real changes made)
+(60,348 real changes made)
+
+. generate byte reported = 1
+
+. merge m:1 ubigeo using "$der/geo/geo_harmonized.dta", keepusing(ubigeo)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                            59
+        from master                         0  (_merge==1)
+        from using                         59  (_merge==2)
+
+    Matched                           101,301  (_merge==3)
+    -----------------------------------------
+
+. quietly count if _merge == 1
+
+. display as text "SIDPOL district codes outside the 2025 list: " r(N)
+SIDPOL district codes outside the 2025 list: 0
+
+. if r(N) tab ubigeo if _merge == 1
+
+. drop if _merge == 1
+(0 observations deleted)
+
+. replace year = 2018 if _merge == 2
+(59 real changes made)
+
+. replace month = 1 if _merge == 2
+(59 real changes made)
+
+. drop _merge
+
+. fillin ubigeo year month
+
+. foreach v of varlist sid_* reported {
+  2.     replace `v' = 0 if missing(`v')
+  3. }
+(80,427 real changes made)
+(80,427 real changes made)
+(80,427 real changes made)
+(80,427 real changes made)
+(80,427 real changes made)
+(80,427 real changes made)
+(80,427 real changes made)
+
+. drop _fillin
+
+. isid ubigeo year month
+
+. generate byte break2025 = year >= 2025
+
+. compress
+  variable sid_estafa was double now int
+  variable sid_extorsion was double now int
+  variable sid_homicidio was double now byte
+  variable sid_hurto was double now int
+  variable sid_otros was double now int
+  variable sid_robo was double now int
+  (6,723,936 bytes saved)
+
+. save "$der/sidpol/sidpol_district_month.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/sidpol/sidpol_district_month.dta saved
+
+. 
+. collapse (sum) sid_* (max) reported break2025, by(ubigeo year)
+
+. label variable reported "District has any SIDPOL report that year (0 = none, not a true zero)"
+
+. isid ubigeo year
+
+. compress
+  variable sid_estafa was double now int
+  variable sid_extorsion was double now int
+  variable sid_homicidio was double now int
+  variable sid_hurto was double now int
+  variable sid_otros was double now int
+  variable sid_robo was double now int
+  (545,184 bytes saved)
+
+. save "$der/sidpol/sidpol_district_year.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/sidpol/sidpol_district_year.dta saved
+
+. tabstat sid_extorsion sid_robo sid_hurto sid_homicidio reported, by(year) stat(sum) format(%12.0fc)
+
+Summary statistics: Sum
+Group variable: year (ANIO)
+
+    year |     sid_ex~n     sid_robo     sid_hu~o     sid_ho~o     reported
+---------+-----------------------------------------------------------------
+    2018 |        3,225      103,135      162,381        1,076        1,426
+    2019 |        3,865      102,524      166,718        1,114        1,530
+    2020 |        2,837       51,858      104,129        1,168        1,609
+    2021 |        4,735       66,223      134,201        1,577        1,682
+    2022 |       16,346       90,047      171,479        1,883        1,686
+    2023 |       22,675      150,397      232,398        2,336        1,707
+    2024 |       22,361      112,574      221,575        2,568        1,703
+    2025 |       26,585       62,844      174,400        2,672        1,675
+---------+-----------------------------------------------------------------
+   Total |      102,629      739,602    1,367,281       14,394       13,018
+---------------------------------------------------------------------------
+
+. 
+. *---- Temp6/Temp7: detailed modalities, 2024-2025 ----------------------
+. tempfile t6
+
+. import excel using "`xlsx'", sheet("Temp6") firstrow clear allstring
+(10 vars, 140,600 obs)
+
+. save `t6'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000003.tmp saved as .dta format
+
+. import excel using "`xlsx'", sheet("Temp7") firstrow clear allstring
+(10 vars, 132,191 obs)
+
+. append using `t6'
+
+. rename (ANIO UBIGEO_HECHO MODALIDAD SUB_TIPO n_dist_ID_DGC) (year ubigeo_raw modalidad subtipo n)
+
+. destring year n, replace
+year: all characters numeric; replaced as int
+n: all characters numeric; replaced as int
+
+. fix_ubigeo ubigeo_raw, generate(ubigeo)
+(82,673 real changes made)
+
+. normname modalidad, generate(m)
+(15,589 real changes made)
+(7,452 real changes made)
+(5,768 real changes made)
+(2,227 real changes made)
+
+. normname subtipo,   generate(s)
+(12,119 real changes made)
+(1,492 real changes made)
+(1,492 real changes made)
+(894 real changes made)
+
+. generate byte sicariato  = ustrregexm(m, "SICARIATO")
+
+. generate byte hom_paf    = ustrregexm(m, "HOMICIDIO POR PAF")
+
+. generate byte extorsion  = ustrregexm(m, "EXTORSION") | ustrregexm(s, "EXTORSION")
+
+. generate byte marcaje    = ustrregexm(m, "MARCAJE|REGLAJE")
+
+. foreach v in sicariato hom_paf extorsion marcaje {
+  2.     generate mod_`v' = n * `v'
+  3. }
+
+. preserve
+
+. collapse (sum) mod_*, by(year)
+
+. list, noobs
+
+  +--------------------------------------------------+
+  | year   mod_si~o   mod_ho~f   mod_ex~n   mod_ma~e |
+  |--------------------------------------------------|
+  | 2024         50       1419      22423        280 |
+  | 2025         47       1361      26652        241 |
+  +--------------------------------------------------+
+
+. restore
+
+. collapse (sum) mod_*, by(ubigeo year)
+
+. isid ubigeo year
+
+. compress
+  variable mod_sicariato was double now byte
+  variable mod_hom_paf was double now int
+  variable mod_extorsion was double now int
+  variable mod_marcaje was double now byte
+  (87,828 bytes saved)
+
+. save "$der/sidpol/sidpol_modalities_2024_2025.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/sidpol/sidpol_modalities_2024_2025.dta saved
+
+. 
+. *---- Comparison with the open-data CSV --------------------------------
+. import delimited "$raw/sidpol/DATASET_Denuncias_Policiales_Ene_2018_a_Julio_2026.csv", ///
+>     clear varnames(1) stringcols(_all) encoding("utf-8")
+(8 vars, 369,100 obs)
+
+. destring anio cantidad, replace
+anio: all characters numeric; replaced as int
+cantidad: all characters numeric; replaced as int
+
+. normname p_modalidades, generate(mod)
+(19,527 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. keep if inlist(mod, "ESTAFA", "EXTORSION", "HURTO", "ROBO")
+(209,380 observations deleted)
+
+. collapse (sum) csv = cantidad, by(anio mod)
+
+. rename anio year
+
+. tempfile csv
+
+. save `csv'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000005.tmp saved as .dta format
+
+. use "$der/sidpol/sidpol_district_year.dta", clear
+
+. collapse (sum) sid_estafa sid_extorsion sid_hurto sid_robo, by(year)
+
+. reshape long sid_, i(year) j(y) string
+(j = estafa extorsion hurto robo)
+
+Data                               Wide   ->   Long
+-----------------------------------------------------------------------------
+Number of observations                8   ->   32          
+Number of variables                   5   ->   3           
+j variable (4 values)                     ->   y
+xij variables:
+  sid_estafa sid_extorsion ... sid_robo   ->   sid_
+-----------------------------------------------------------------------------
+
+. generate mod = upper(y)
+
+. rename sid_ xlsx
+
+. merge 1:1 year mod using `csv', keep(master match) nogenerate
+(variable mod was str9, now str244 to accommodate using data's values)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                32  
+    -----------------------------------------
+
+. generate gap_pct = 100 * (csv - xlsx) / xlsx
+
+. list year mod xlsx csv gap_pct, noobs sepby(year)
+
+  +-------------------------------------------------+
+  | year         mod     xlsx      csv      gap_pct |
+  |-------------------------------------------------|
+  | 2018      ESTAFA     9557     9574    .17788009 |
+  | 2018   EXTORSION     3225     3072    -4.744186 |
+  | 2018       HURTO   162381   161503   -.54070365 |
+  | 2018        ROBO   103135    96091   -6.8298832 |
+  |-------------------------------------------------|
+  | 2019      ESTAFA    12172    12196    .19717384 |
+  | 2019   EXTORSION     3865     3705   -4.1397154 |
+  | 2019       HURTO   166718   165659   -.63520436 |
+  | 2019        ROBO   102524    94793   -7.5406734 |
+  |-------------------------------------------------|
+  | 2020      ESTAFA    14028    14056     .1996008 |
+  | 2020   EXTORSION     2837     2689   -5.2167783 |
+  | 2020       HURTO   104129   103375   -.72410184 |
+  | 2020        ROBO    51858    47114   -9.1480582 |
+  |-------------------------------------------------|
+  | 2021      ESTAFA    20689    20743    .26100827 |
+  | 2021   EXTORSION     4735     4539   -4.1393875 |
+  | 2021       HURTO   134201   133421   -.58121773 |
+  | 2021        ROBO    66223    59717   -9.8243813 |
+  |-------------------------------------------------|
+  | 2022      ESTAFA    26782    26914    .49286834 |
+  | 2022   EXTORSION    16346    16066   -1.7129573 |
+  | 2022       HURTO   171479   170583   -.52251296 |
+  | 2022        ROBO    90047    82958   -7.8725554 |
+  |-------------------------------------------------|
+  | 2023      ESTAFA    34092    34304    .62184677 |
+  | 2023   EXTORSION    22675    22320   -1.5656009 |
+  | 2023       HURTO   232398   231464   -.40189675 |
+  | 2023        ROBO   150397   141708   -5.7773759 |
+  |-------------------------------------------------|
+  | 2024      ESTAFA    39912    40281    .92453397 |
+  | 2024   EXTORSION    22361    21915   -1.9945441 |
+  | 2024       HURTO   221575   220864   -.32088458 |
+  | 2024        ROBO   112574   105251   -6.5050545 |
+  |-------------------------------------------------|
+  | 2025      ESTAFA    38173    40068    4.9642417 |
+  | 2025   EXTORSION    26585    26730    .54542035 |
+  | 2025       HURTO   174400   180604    3.5573394 |
+  | 2025        ROBO    62844    57200   -8.9809687 |
+  +-------------------------------------------------+
+
+. save "$der/sidpol/sidpol_xlsx_vs_csv.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/sidpol/sidpol_xlsx_vs_csv.dta saved
+
+. display as text "15_sidpol_panels: done"
+15_sidpol_panels: done
+
+. 
+end of do-file

@@ -1,0 +1,462 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L00_install
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/00_install.log
+  log type:  text
+ opened on:  30 Sep 2026, 00:41:05
+
+. *=====================================================================
+. * 00_install.do - install user-written packages into code/ado/plus
+. *
+. * Called by master.do when the pinned folder lacks ivreghdfe. Writes the
+. * installed versions to output/logs/package_versions.log and runs smoke
+. * tests on sysuse auto. Stage 1 (build) uses only built-in commands.
+. *
+. * Sources checked 2026-09-29 (see .claude/2026-09-29_analysis_plan.md).
+. * Not verified: the tF program of Lee et al. (2022); 52_weakiv_inference
+. * will use a lookup of their Table 3 critical values if it is missing.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. local ssc require ftools reghdfe ranktest ivreg2 ivreghdfe avar moremata  ///
+>           weakivtest weakiv boottest ppmlhdfe hdfe acreg mvtnorm plausexog ///
+>           rwolf did_multiplegt_stat did_multiplegt_dyn jwdid gtools estout ///
+>           coefplot spmap shp2dta geonear ritest
+
+. 
+. local failed ""
+
+. foreach p of local ssc {
+  2.     capture noisily ssc install `p', replace
+  3.     if _rc local failed "`failed' `p'"
+  4. }
+checking require consistency and verifying not already installed...
+installing into C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\...
+installation complete.
+checking ftools consistency and verifying not already installed...
+all files already exist and are up to date.
+checking reghdfe consistency and verifying not already installed...
+all files already exist and are up to date.
+checking ranktest consistency and verifying not already installed...
+all files already exist and are up to date.
+checking ivreg2 consistency and verifying not already installed...
+all files already exist and are up to date.
+checking ivreghdfe consistency and verifying not already installed...
+all files already exist and are up to date.
+checking avar consistency and verifying not already installed...
+all files already exist and are up to date.
+checking moremata consistency and verifying not already installed...
+all files already exist and are up to date.
+checking weakivtest consistency and verifying not already installed...
+all files already exist and are up to date.
+checking weakiv consistency and verifying not already installed...
+all files already exist and are up to date.
+checking boottest consistency and verifying not already installed...
+all files already exist and are up to date.
+checking ppmlhdfe consistency and verifying not already installed...
+all files already exist and are up to date.
+checking hdfe consistency and verifying not already installed...
+all files already exist and are up to date.
+checking acreg consistency and verifying not already installed...
+all files already exist and are up to date.
+checking mvtnorm consistency and verifying not already installed...
+all files already exist and are up to date.
+checking plausexog consistency and verifying not already installed...
+all files already exist and are up to date.
+checking rwolf consistency and verifying not already installed...
+all files already exist and are up to date.
+checking did_multiplegt_stat consistency and verifying not already installed...
+all files already exist and are up to date.
+checking did_multiplegt_dyn consistency and verifying not already installed...
+all files already exist and are up to date.
+checking jwdid consistency and verifying not already installed...
+all files already exist and are up to date.
+checking gtools consistency and verifying not already installed...
+all files already exist and are up to date.
+checking estout consistency and verifying not already installed...
+all files already exist and are up to date.
+checking coefplot consistency and verifying not already installed...
+all files already exist and are up to date.
+checking spmap consistency and verifying not already installed...
+all files already exist and are up to date.
+checking shp2dta consistency and verifying not already installed...
+all files already exist and are up to date.
+checking geonear consistency and verifying not already installed...
+all files already exist and are up to date.
+checking ritest consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. 
+. * GitHub-only packages
+. capture noisily net install ivppmlhdfe, replace ///
+>     from("https://raw.githubusercontent.com/ekwonomist/ivppmlhdfe/main/")
+checking ivppmlhdfe consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. if _rc local failed "`failed' ivppmlhdfe"
+
+. capture noisily net install scpc, replace ///
+>     from("https://raw.githubusercontent.com/ukmueller/SCPC/master/src")
+checking scpc consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. if _rc local failed "`failed' scpc"
+
+. capture noisily net install honestdid, replace ///
+>     from("https://raw.githubusercontent.com/mcaceresb/stata-honestdid/main")
+checking honestdid consistency and verifying not already installed...
+all files already exist and are up to date.
+
+. if _rc local failed "`failed' honestdid"
+
+. capture noisily net install spur, replace ///
+>     from("https://raw.githubusercontent.com/pdavidboll/SPUR/main/")
+checking spur consistency and verifying not already installed...
+installing into C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\...
+installation complete.
+
+. if _rc local failed "`failed' spur"
+
+. capture noisily net install binsreg, replace ///
+>     from("https://raw.githubusercontent.com/nppackages/binsreg/master/stata/")
+checking binsreg consistency and verifying not already installed...
+installing into C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\...
+installation complete.
+
+. if _rc local failed "`failed' binsreg"
+
+. 
+. * Compile Mata libraries
+. capture noisily ftools, compile
+(compiling lftools.mlib for Stata 18.5)
+(library saved in C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus/l/lftools.mlib)
+
+. capture noisily reghdfe, compile
+last estimates not found
+
+. 
+. display as text "Packages that failed to install: `failed'"
+Packages that failed to install: 
+
+. 
+. *---------------- Record versions ------------------------------------
+. log using "$logs/package_versions.log", replace text name(pkgver)
+(file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/package_versions.log not found)
+------------------------------------------------------------------------------------------------------------------------
+      name:  pkgver
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/package_versions.log
+  log type:  text
+ opened on:  30 Sep 2026, 00:44:17
+
+. display "Package versions installed `c(current_date)' in `c(sysdir_plus)'"
+Package versions installed 30 Sep 2026 in C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus/
+
+. ado dir
+
+[1] package ftools from http://fmwww.bc.edu/repec/bocode/f
+      'FTOOLS': module to provide alternatives to common Stata commands optimized for large datasets
+
+[2] package reghdfe from http://fmwww.bc.edu/repec/bocode/r
+      'REGHDFE': module to perform linear or instrumental-variable regression absorbing any number of high-dimensional f
+> ixed effects
+
+[3] package ranktest from http://fmwww.bc.edu/repec/bocode/r
+      'RANKTEST': module to test the rank of a matrix
+
+[4] package ivreg2 from http://fmwww.bc.edu/repec/bocode/i
+      'IVREG2': module for extended instrumental variables/2SLS and GMM estimation
+
+[5] package ivreghdfe from http://fmwww.bc.edu/repec/bocode/i
+      'IVREGHDFE': module for extended instrumental variable regressions with multiple levels of fixed effects
+
+[6] package avar from http://fmwww.bc.edu/repec/bocode/a
+      'AVAR': module to perform asymptotic covariance estimation for iid and non-iid data robust to heteroskedasticity, 
+> autocorrelation, 1- and 2-way clustering, and common cross-panel autocorrelated dis
+
+[7] package moremata from http://fmwww.bc.edu/repec/bocode/m
+      'MOREMATA': module (Mata) to provide various functions
+
+[8] package weakivtest from http://fmwww.bc.edu/repec/bocode/w
+      'WEAKIVTEST': module to perform weak instrument test for a single endogenous regressor in TSLS and LIML
+
+[9] package weakiv from http://fmwww.bc.edu/repec/bocode/w
+      'WEAKIV': module to perform weak-instrument-robust tests and confidence intervals for instrumental-variable (IV) e
+> stimation of linear, probit and tobit models
+
+[10] package boottest from http://fmwww.bc.edu/repec/bocode/b
+      'BOOTTEST': module to provide fast execution of the wild bootstrap with null imposed
+
+[11] package ppmlhdfe from http://fmwww.bc.edu/repec/bocode/p
+      'PPMLHDFE': module for Poisson pseudo-likelihood regression with multiple levels of fixed effects
+
+[12] package hdfe from http://fmwww.bc.edu/repec/bocode/h
+      'HDFE': module to partial out variables with respect to a set of fixed effects
+
+[13] package acreg from http://fmwww.bc.edu/repec/bocode/a
+      'ACREG': module to perform Arbitrary Correlation Regression
+
+[14] package mvtnorm from http://fmwww.bc.edu/repec/bocode/m
+      'MVTNORM': module to work with the multivariate normal and multivariate t distributions, with and without variable
+>  truncation
+
+[15] package plausexog from http://fmwww.bc.edu/repec/bocode/p
+      'PLAUSEXOG': module to implement Conley et al's plausibly exogenous bounds
+
+[16] package rwolf from http://fmwww.bc.edu/repec/bocode/r
+      'RWOLF': module to calculate Romano-Wolf stepdown p-values for multiple hypothesis testing
+
+[17] package did_multiplegt_stat from http://fmwww.bc.edu/repec/bocode/d
+      'DID_MULTIPLEGT_STAT': module for heterogeneity-robust difference-in differences (DID) estimators
+
+[18] package did_multiplegt_dyn from http://fmwww.bc.edu/repec/bocode/d
+      'DID_MULTIPLEGT_DYN': module to estimate event-study Difference-in-Difference (DID) estimators in designs with mul
+> tiple groups and periods, with a potentially non-binary treatment that may increase
+
+[19] package jwdid from http://fmwww.bc.edu/repec/bocode/j
+      'JWDID': module to estimate Difference-in-Difference models using Mundlak approach
+
+[20] package gtools from http://fmwww.bc.edu/repec/bocode/g
+      'GTOOLS': module to provide a fast implementation of common group commands
+
+[21] package estout from http://fmwww.bc.edu/repec/bocode/e
+      'ESTOUT': module to make regression tables
+
+[22] package coefplot from http://fmwww.bc.edu/repec/bocode/c
+      'COEFPLOT': module to plot regression coefficients and other results
+
+[23] package spmap from http://fmwww.bc.edu/repec/bocode/s
+      'SPMAP': module to visualize spatial data
+
+[24] package shp2dta from http://fmwww.bc.edu/repec/bocode/s
+      'SHP2DTA': module to converts shape boundary files to Stata datasets
+
+[25] package geonear from http://fmwww.bc.edu/repec/bocode/g
+      'GEONEAR': module to find nearest neighbors using geodetic distances
+
+[26] package ritest from http://fmwww.bc.edu/repec/bocode/r
+      'RITEST': module to perform randomization inference and permutation tests
+
+[27] package ivppmlhdfe from https://raw.githubusercontent.com/ekwonomist/ivppmlhdfe/main
+      ivppmlhdfe: IV-PPML with High-Dimensional Fixed Effects
+
+[28] package scpc from https://raw.githubusercontent.com/ukmueller/SCPC/master/src
+      'scpc': Spatial Correlation Robust Inference.
+
+[29] package honestdid from https://raw.githubusercontent.com/mcaceresb/stata-honestdid/main
+      ^
+
+[30] package require from http://fmwww.bc.edu/repec/bocode/r
+      'REQUIRE': module to ensure that installed packages have a minimum or exact version.
+
+[31] package spur from https://raw.githubusercontent.com/pdavidboll/SPUR/main
+      'spur': Spatial Unit Roots in Regressions
+
+[32] package binsreg from https://raw.githubusercontent.com/nppackages/binsreg/master/stata
+      STATA Package: BINSREG PACKAGE
+
+. foreach p in reghdfe ivreghdfe ivreg2 ppmlhdfe boottest acreg weakivtest {
+  2.     capture noisily which `p'
+  3. }
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\r\reghdfe.ado
+*! version 6.13.1 10Jan2026
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\i\ivreghdfe.ado
+*! ivreghdfe 1.1.4  29nov2025 (bugfix for github issue #61)
+*! ivreghdfe 1.1.3  04Jan2023 (bugfix for github issue #48)
+*! ivreghdfe 1.1.2  29Sep2022 (bugfix for github issue #44)
+*! ivreghdfe 1.1.1  14Dec2021 (experimental -margins- support)
+*! ivreghdfe 1.1.0  25Feb2021
+*! ivreg2 4.1.11  22Nov2019
+*! authors cfb & mes
+*! see end of file for version comments
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\i\ivreg2.ado
+*! ivreg2 4.1.12  14aug2024
+*! authors cfb & mes
+*! see end of file for version comments
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\p\ppmlhdfe.ado
+*! version 2.3.3 02nov2025
+*! Authors: Sergio Correia, Paulo Guimarães, Thomas Zylkin
+*! URL: https://github.com/sergiocorreia/ppmlhdfe
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\b\boottest.ado
+*! boottest 4.5.3 5 June 2026
+*! Copyright (C) 2015-26 David Roodman
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\a\acreg.ado
+*! Version December 2020  (1.1.0)
+*! ACREG: Arbitrary Correlation Regression
+*! Authors: F. Colella, R. Lalive, S.O. Sakalli, M. Thoenig
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\w\weakivtest.ado
+
+. log close pkgver
+      name:  pkgver
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/package_versions.log
+  log type:  text
+ closed on:  30 Sep 2026, 00:44:17
+------------------------------------------------------------------------------------------------------------------------
+
+. 
+. *---------------- Smoke tests ----------------------------------------
+. sysuse auto, clear
+(1978 automobile data)
+
+. ivreghdfe price (mpg = weight), absorb(foreign) cluster(rep78)
+(MWFE estimator converged in 1 iterations)
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on rep78
+
+Number of clusters (rep78) =         5                Number of obs =       69
+                                                      F(  1,     4) =     6.29
+                                                      Prob > F      =   0.0662
+Total (centered) SS     =  576623051.6                Centered R2   =   0.0676
+Total (uncentered) SS   =  576623051.6                Uncentered R2 =   0.0676
+Residual SS             =  537665950.5                Root MSE      =     2854
+
+------------------------------------------------------------------------------
+             |               Robust
+       price | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         mpg |  -519.9801   207.2788    -2.51   0.066    -1095.478    55.51816
+------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):              3.338
+                                                   Chi-sq(1) P-val =    0.0677
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):               86.546
+                         (Kleibergen-Paap rk Wald F statistic):         20.407
+Stock-Yogo weak ID test critical values: 10% maximal IV size             16.38
+                                         15% maximal IV size              8.96
+                                         20% maximal IV size              6.66
+                                         25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+------------------------------------------------------------------------------
+Hansen J statistic (overidentification test of all instruments):         0.000
+                                                 (equation exactly identified)
+------------------------------------------------------------------------------
+Instrumented:         mpg
+Excluded instruments: weight
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+     foreign |         2           0           2     |
+-----------------------------------------------------+
+
+. assert e(N) > 0
+
+. ppmlhdfe price mpg, absorb(foreign) vce(robust)
+Iteration 1:   deviance = 5.6595e+04  eps = .         iters = 1    tol = 1.0e-04  min(eta) =  -0.04  P   
+Iteration 2:   deviance = 5.6182e+04  eps = 7.35e-03  iters = 1    tol = 1.0e-04  min(eta) =  -0.13      
+Iteration 3:   deviance = 5.6182e+04  eps = 4.06e-06  iters = 1    tol = 1.0e-04  min(eta) =  -0.13      
+Iteration 4:   deviance = 5.6182e+04  eps = 1.71e-12  iters = 1    tol = 1.0e-05  min(eta) =  -0.13      
+Iteration 5:   deviance = 5.6182e+04  eps = 3.73e-16  iters = 1    tol = 1.0e-07  min(eta) =  -0.13   S O
+------------------------------------------------------------------------------------------------------------
+(legend: p: exact partial-out   s: exact solver   h: step-halving   o: epsilon below tolerance)
+Converged in 5 iterations and 5 HDFE sub-iterations (tol = 1.0e-08)
+
+HDFE PPML regression                              No. of obs      =         74
+Absorbing 1 HDFE group                            Residual df     =         71
+                                                  Wald chi2(1)    =      31.01
+Deviance             =  56181.59391               Prob > chi2     =     0.0000
+Log pseudolikelihood = -28478.50297               Pseudo R2       =     0.3526
+------------------------------------------------------------------------------
+             |               Robust
+       price | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         mpg |  -.0524904   .0094258    -5.57   0.000    -.0709647   -.0340162
+       _cons |   9.811425   .2008634    48.85   0.000      9.41774    10.20511
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+     foreign |         2           0           2     |
+-----------------------------------------------------+
+
+. assert e(N) > 0
+
+. ivreg2 price (mpg = weight), robust
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity
+
+                                                      Number of obs =       74
+                                                      F(  1,    72) =    18.94
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =  635065396.1                Centered R2   =   0.1801
+Total (uncentered) SS   =   3447834321                Uncentered R2 =   0.8490
+Residual SS             =  520685110.7                Root MSE      =     2653
+
+------------------------------------------------------------------------------
+             |               Robust
+       price | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+         mpg |  -340.1846   77.10159    -4.41   0.000    -491.3009   -189.0682
+       _cons |   13410.27   1807.752     7.42   0.000      9867.14     16953.4
+------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):             28.047
+                                                   Chi-sq(1) P-val =    0.0000
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):              134.618
+                         (Kleibergen-Paap rk Wald F statistic):        105.830
+Stock-Yogo weak ID test critical values: 10% maximal IV size             16.38
+                                         15% maximal IV size              8.96
+                                         20% maximal IV size              6.66
+                                         25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+------------------------------------------------------------------------------
+Hansen J statistic (overidentification test of all instruments):         0.000
+                                                 (equation exactly identified)
+------------------------------------------------------------------------------
+Instrumented:         mpg
+Excluded instruments: weight
+------------------------------------------------------------------------------
+
+. boottest mpg, reps(199) seed(1) nograph
+
+Wild bootstrap-t, null imposed, 199 replications, Wald test, Rademacher weights:
+  mpg
+
+                               z =    -4.4122
+                        Prob>|z| =     0.0000
+
+95% confidence set for null hypothesis expression: [−488.9, −186.4]
+
+. weakivtest
+(obs=74)
+
+Montiel-Pflueger robust weak instrument test
+--------------------------------------------
+Effective F statistic:      105.830
+Confidence level alpha:          5%
+--------------------------------------------
+
+--------------------------------------------
+Critical Values             TSLS      LIML
+--------------------------------------------
+% of Worst Case Bias
+tau=5%                    37.418    37.418
+tau=10%                   23.109    23.109
+tau=20%                   15.062    15.062
+tau=30%                   12.039    12.039
+--------------------------------------------
+
+. display as text "00_install.do: smoke tests passed"
+00_install.do: smoke tests passed
+
+. if "`failed'" != "" display as error "Install failures to resolve: `failed'"
+
+. 
+end of do-file

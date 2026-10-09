@@ -1,0 +1,200 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L23_import_instruments
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/23_import_instruments.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:56:55
+
+. *=====================================================================
+. * 23_import_instruments.do - instruments and geographic controls
+. *
+. * Inputs: $gis/district_geometry.csv     (code/gis/17_district_geometry.py)
+. *         $gis/altitude.csv              (code/gis/22_altitude_popw.py)
+. *         $gis/travel_time_cebaf.csv     (code/gis/21_travel_time_cebaf.py)
+. *         $der/instruments/z1.dta        (20_z1_share2007.do, once REDATAM 2007 exists)
+. * Output: $der/instruments/instruments.dta (one row per 2025 district)
+. *
+. * Z2 = log road travel time (hours) from CEBAF Tumbes on the 2017-01-01
+. *      OSM network, from the GHSL 2015 population-weighted centroid.
+. * Z3 = GHSL 2015 population-weighted altitude (km), Copernicus GLO-90.
+. * Three 2025 districts (120307, 130112, 160405) are missing from the INEI
+. * boundary file and the crosswalk, so their geographic variables are
+. * missing until their parent districts are coded.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. import delimited "$gis/district_geometry.csv", clear varnames(1) stringcols(1)
+(encoding automatically selected: ISO-8859-2)
+(5 vars, 1,890 obs)
+
+. isid ubigeo
+
+. tempfile geo
+
+. save `geo'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000002.tmp saved as .dta format
+
+. import delimited "$gis/altitude.csv", clear varnames(1) stringcols(1)
+(encoding automatically selected: ISO-8859-1)
+(10 vars, 1,890 obs)
+
+. isid ubigeo
+
+. merge 1:1 ubigeo using `geo'
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,890  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 1890
+
+. drop _merge
+
+. save `geo', replace
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000002.tmp saved as .dta format
+
+. import delimited "$gis/travel_time_cebaf.csv", clear varnames(1) stringcols(1)
+(encoding automatically selected: ISO-8859-2)
+(9 vars, 1,890 obs)
+
+. rename (lat lon) (lat_pt lon_pt)
+
+. isid ubigeo
+
+. merge 1:1 ubigeo using `geo'
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,890  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 1890
+
+. drop _merge
+
+. 
+. merge 1:1 ubigeo using "$der/geo/geo_harmonized.dta", keepusing(ubigeo)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             3
+        from master                         0  (_merge==1)
+        from using                          3  (_merge==2)
+
+    Matched                             1,890  (_merge==3)
+    -----------------------------------------
+
+. quietly count if _merge == 1
+
+. display as text "Boundary districts not in the 2025 list: " r(N)
+Boundary districts not in the 2025 list: 0
+
+. assert r(N) == 0
+
+. quietly count if _merge == 2
+
+. display as text "2025 districts without geography: " r(N)
+2025 districts without geography: 3
+
+. assert r(N) <= 3
+
+. generate byte geo_missing = _merge == 2
+
+. drop _merge
+
+. 
+. *---- Instruments -----------------------------------------------------
+. generate z2_ltt  = ln(tt_cebaf_h + 0.5)
+(3 missing values generated)
+
+. generate z2_lkm  = ln(km_cebaf + 1)
+(3 missing values generated)
+
+. generate z3_alt  = alt_popw / 1000
+(3 missing values generated)
+
+. label variable z2_ltt "Z2: log(hours + 0.5), road travel time from CEBAF Tumbes (OSM 2017)"
+
+. label variable z2_lkm "Z2 variant: log(km + 1), shortest road distance from CEBAF Tumbes"
+
+. label variable z3_alt "Z3: population-weighted altitude, km (GHSL 2015, GLO-90)"
+
+. 
+. *---- Geographic controls (all pre-period or time-invariant) ----------
+. generate ltt_lima = ln(tt_lima_h + 0.5)
+(3 missing values generated)
+
+. generate larea    = ln(area_km2)
+(3 missing values generated)
+
+. generate ldens15  = ln(pop_ghsl15 / area_km2)
+(3 missing values generated)
+
+. * Centered near Peru's middle; raw squares (lon^2 near 5,700) make the
+. * reghdfe cluster VCE numerically singular (checked 2026-09-30)
+. generate lat  = lat_popw + 10
+(3 missing values generated)
+
+. generate lon  = lon_popw + 75
+(3 missing values generated)
+
+. generate lat2 = lat^2
+(3 missing values generated)
+
+. generate lon2 = lon^2
+(3 missing values generated)
+
+. generate latlon = lat * lon
+(3 missing values generated)
+
+. label variable lat "Latitude of GHSL-weighted centroid + 10"
+
+. label variable lon "Longitude of GHSL-weighted centroid + 75"
+
+. generate byte snap_far = snap_km > 20 if !missing(snap_km)
+(3 missing values generated)
+
+. label variable ltt_lima "log(hours + 0.5), road travel time to Lima (OSM 2017)"
+
+. label variable ldens15  "log GHSL 2015 population per km2"
+
+. label variable snap_far "District point more than 20 km from the road network"
+
+. 
+. capture confirm file "$der/instruments/z1.dta"
+
+. if !_rc {
+.     merge 1:1 ubigeo using "$der/instruments/z1.dta", keep(master match) nogenerate
+. }
+
+. 
+. isid ubigeo
+
+. assert _N == 1893
+
+. compress
+  (0 bytes saved)
+
+. save "$der/instruments/instruments.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/instruments/instruments.dta saved
+
+. summarize z2_ltt z3_alt ltt_lima ldens15 snap_far
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+      z2_ltt |      1,890      2.8775    .5197098  -.6552735   3.928229
+      z3_alt |      1,890    2.265506    1.392517    .004125    4.92122
+    ltt_lima |      1,890    2.112964    .7161424   -.651046   3.893464
+     ldens15 |      1,890    3.113546    1.831168  -2.385801   10.27738
+    snap_far |      1,890    .0386243    .1927489          0          1
+
+. display as text "23_import_instruments: done"
+23_import_instruments: done
+
+. 
+end of do-file

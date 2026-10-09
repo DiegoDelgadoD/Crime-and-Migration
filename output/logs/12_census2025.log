@@ -1,0 +1,243 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L12_census2025
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/12_census2025.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:54:04
+
+. *=====================================================================
+. * 12_census2025.do - 2025 census district file
+. *
+. * Inputs: data/Consulta de población por Sexo, según nivel Distrital.xlsx
+. *         data/Consulta de población por Población inmigrante extranjera
+. *              por grandes grupos edad, según nivel Distrital.xlsx
+. *         $raw/census2025/census2025_foreign_born_top6_by_district.csv
+. *              (code/00_fetch_census2025_country_of_birth.py)
+. * Output: $der/census/census2025_district.dta
+. *
+. * Populations are censused persons (not including the 1.45 million
+. * omitted persons that INEI adds in Indicadores_demograficos INDDEM01).
+. * Venezuela-born counts come from the top-six country list; where
+. * Venezuela is not listed, the count is censored and bounded.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. *---- Population by sex -----------------------------------------------
+. import excel using "$data/Consulta de población por Sexo, según nivel Distrital.xlsx", ///
+>     clear allstring
+(8 vars, 1,906 obs)
+
+. keep if ustrregexm(B, "^[0-9]{6}$")
+(13 observations deleted)
+
+. keep B F G H
+
+. rename (B F G H) (ubigeo pop25 male25 female25)
+
+. * INEI prints "-" for zero
+. foreach v in pop25 male25 female25 {
+  2.     replace `v' = "0" if ustrtrim(`v') == "-"
+  3. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. destring pop25 male25 female25, replace
+pop25: all characters numeric; replaced as long
+male25: all characters numeric; replaced as long
+female25: all characters numeric; replaced as long
+
+. assert pop25 == male25 + female25
+
+. isid ubigeo
+
+. assert _N == 1893
+
+. quietly summarize pop25
+
+. assert r(sum) == 32706028
+
+. tempfile pop
+
+. save `pop'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000002.tmp saved as .dta format
+
+. 
+. *---- Foreign-born by age group ---------------------------------------
+. import excel using "$data/Consulta de población por Población inmigrante extranjera por grandes grupos edad, según niv
+> el Distrital.xlsx", ///
+>     clear allstring
+(9 vars, 1,906 obs)
+
+. keep if ustrregexm(B, "^[0-9]{6}$")
+(13 observations deleted)
+
+. keep B F G H I
+
+. rename (B F G H I) (ubigeo fb25 fb25_0014 fb25_1559 fb25_60p)
+
+. foreach v of varlist fb25* {
+  2.     replace `v' = "0" if ustrtrim(`v') == "-"
+  3. }
+(0 real changes made)
+(872 real changes made)
+(653 real changes made)
+(1,223 real changes made)
+
+. destring fb25*, replace
+fb25: all characters numeric; replaced as long
+fb25_0014: all characters numeric; replaced as int
+fb25_1559: all characters numeric; replaced as long
+fb25_60p: all characters numeric; replaced as int
+
+. assert fb25 == fb25_0014 + fb25_1559 + fb25_60p
+
+. isid ubigeo
+
+. quietly summarize fb25
+
+. assert r(sum) == 1052977
+
+. merge 1:1 ubigeo using `pop'
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,893  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 1893
+
+. drop _merge
+
+. tempfile fb
+
+. save `fb'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000003.tmp saved as .dta format
+
+. 
+. *---- Venezuela-born from the top-six list ----------------------------
+. import delimited "$raw/census2025/census2025_foreign_born_top6_by_district.csv", ///
+>     clear varnames(1) stringcols(1) encoding("utf-8")
+(7 vars, 5,359 obs)
+
+. assert ustrregexm(ubigeo, "^[0-9]{6}$")
+
+. bysort ubigeo: egen n_listed   = total(!missing(country))
+
+. bysort ubigeo: egen sum_listed = total(count)
+
+. bysort ubigeo: egen rank6_cnt  = total(cond(rank == 6, count, 0))
+
+. generate byte is_ven = country == "Venezuela"
+
+. bysort ubigeo: egen ven_listed = total(cond(is_ven, count, 0))
+
+. bysort ubigeo: egen any_ven    = max(is_ven)
+
+. bysort ubigeo: keep if _n == 1
+(3,466 observations deleted)
+
+. keep ubigeo foreign_born_total n_listed sum_listed rank6_cnt ven_listed any_ven
+
+. isid ubigeo
+
+. assert _N == 1893
+
+. 
+. * Venezuela censored only if six countries are listed and it is not one
+. generate byte ven_censored = (any_ven == 0 & n_listed == 6)
+
+. generate ven25 = ven_listed if !ven_censored
+(10 missing values generated)
+
+. generate ven25_lb = cond(ven_censored, 0, ven25)
+
+. generate ven25_ub = cond(ven_censored, min(rank6_cnt, foreign_born_total - sum_listed), ven25)
+
+. label variable ven25        "Venezuela-born, 2025 census (missing if censored)"
+
+. label variable ven_censored "Venezuela not in the district's top six countries"
+
+. label variable ven25_lb "Venezuela-born, lower bound"
+
+. label variable ven25_ub "Venezuela-born, upper bound"
+
+. quietly summarize ven_listed
+
+. assert r(sum) == 909684
+
+. 
+. merge 1:1 ubigeo using `fb'
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,893  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 1893
+
+. drop _merge
+
+. assert foreign_born_total == fb25
+
+. drop foreign_born_total n_listed sum_listed rank6_cnt ven_listed any_ven
+
+. 
+. generate vshare25    = ven25 / pop25
+(10 missing values generated)
+
+. generate vshare25_lb = ven25_lb / pop25
+
+. generate vshare25_ub = ven25_ub / pop25
+
+. generate fbshare25   = fb25 / pop25
+
+. assert inrange(vshare25_lb, 0, 1) & vshare25_lb <= vshare25_ub
+
+. label variable vshare25  "Venezuela-born share of population, 2025"
+
+. label variable fbshare25 "Foreign-born share of population, 2025"
+
+. 
+. merge 1:1 ubigeo using "$der/geo/geo_harmonized.dta", keepusing(hid dept_id prov_id lima_callao tumbes)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,893  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 1893
+
+. drop _merge
+
+. 
+. compress
+  variable ven25 was double now long
+  variable ven25_lb was double now long
+  variable ven25_ub was double now long
+  (22,716 bytes saved)
+
+. isid ubigeo
+
+. save "$der/census/census2025_district.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/census/census2025_district.dta saved
+
+. 
+. quietly count if ven_censored
+
+. display as text "12_census2025: " _N " districts; Venezuela censored in " r(N)
+12_census2025: 1893 districts; Venezuela censored in 10
+
+. quietly summarize ven25_ub if ven_censored
+
+. display as text "  upper bound on Venezuela-born in censored districts: " r(sum)
+  upper bound on Venezuela-born in censored districts: 13
+
+. 
+end of do-file

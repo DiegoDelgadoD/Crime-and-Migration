@@ -1,0 +1,230 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L41_benchmarks
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/41_benchmarks.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:56:56
+
+. *=====================================================================
+. * 41_benchmarks.do - SINADEF and SIDPOL homicides against the official
+. *                    CEIC series
+. *
+. * Inputs: $der/sinadef/sinadef_district_year.dta
+. *         $der/sidpol/sidpol_district_year.dta
+. *         $der/census/census2025_district.dta
+. *         $look/ceic_homicides_national.csv   (INEI 2026, p. 7 table)
+. *         $look/ceic_homicide_rates_2025.csv  (INEI 2026, p. 8 chart)
+. * Output: $est/bench_national.dta, $est/bench_region2025.dta
+. *
+. * CEIC counts deaths from intentional crimes, built mainly from police
+. * records and cross-checked against SINADEF (INEI 2026, pp. 5-6), so the
+. * ratio SINADEF / CEIC is a coverage proxy, not an exact completeness rate.
+. * Regional rates use CEIC's own 2025 rates and census 2025 population for
+. * SINADEF; the population bases differ (projected vs counted).
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. *---- National series ------------------------------------------------
+. use "$der/sinadef/sinadef_district_year.dta", clear
+
+. collapse (sum) sinadef_hom = hom, by(year)
+
+. tempfile s
+
+. save `s'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000002.tmp saved as .dta format
+
+. use "$der/sidpol/sidpol_district_year.dta", clear
+
+. collapse (sum) sidpol_hom = sid_homicidio, by(year)
+
+. merge 1:1 year using `s', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             1
+        from master                         0  
+        from using                          1  
+
+    Matched                                 8  
+    -----------------------------------------
+
+. tempfile ss
+
+. save `ss'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000003.tmp saved as .dta format
+
+. import delimited "$look/ceic_homicides_national.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(5 vars, 7 obs)
+
+. keep year ceic_homicides ceic_rate
+
+. merge 1:1 year using `ss', keep(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 7  
+    -----------------------------------------
+
+. generate ratio_sinadef_ceic = sinadef_hom / ceic_homicides
+
+. generate ratio_sidpol_ceic  = sidpol_hom / ceic_homicides
+
+. format ratio_* %5.3f
+
+. list year ceic_homicides sinadef_hom ratio_sinadef_ceic sidpol_hom ratio_sidpol_ceic, noobs
+
+  +-------------------------------------------------------------+
+  | year   ceic_h~s   sinade~m   r~f_ceic   sidpol~m   r~l_ceic |
+  |-------------------------------------------------------------|
+  | 2019       2385       1125      0.472       1114      0.467 |
+  | 2020       1903       1001      0.526       1168      0.614 |
+  | 2021       2853       1387      0.486       1577      0.553 |
+  | 2022       2879       1504      0.522       1883      0.654 |
+  | 2023       3126       1474      0.472       2336      0.747 |
+  |-------------------------------------------------------------|
+  | 2024       3426       2053      0.599       2568      0.750 |
+  | 2025       3675       2217      0.603       2672      0.727 |
+  +-------------------------------------------------------------+
+
+. assert _N == 7
+
+. save "$est/bench_national.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/estimates/bench_national.dta saved
+
+. 
+. *---- Regions, 2025 ------------------------------------------------------
+. use "$der/sinadef/sinadef_district_year.dta", clear
+
+. keep if year == 2025
+(15,144 observations deleted)
+
+. merge 1:1 ubigeo using "$der/census/census2025_district.dta", keepusing(pop25 dept_id prov_id)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,893  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 1893
+
+. drop _merge
+
+. generate str4 region_code = dept_id
+
+. replace region_code = "1501" if prov_id == "1501"
+(43 real changes made)
+
+. replace region_code = "15xx" if dept_id == "15" & prov_id != "1501"
+(128 real changes made)
+
+. collapse (sum) hom pop25, by(region_code)
+
+. generate sinadef_rate = hom / pop25 * 1e5
+
+. tempfile r
+
+. save `r'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000004.tmp saved as .dta format
+
+. import delimited "$look/ceic_homicide_rates_2025.csv", clear varnames(1) stringcols(2)
+(encoding automatically selected: ISO-8859-1)
+(4 vars, 26 obs)
+
+. replace region_code = "0" + region_code if strlen(region_code) == 1
+(0 real changes made)
+
+. merge 1:1 region_code using `r'
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                26  (_merge==3)
+    -----------------------------------------
+
+. check_merge, master(0) using(0)
+merge: master only 0, using only 0, matched 26
+
+. drop _merge
+
+. generate ratio = sinadef_rate / rate_2025
+
+. format sinadef_rate ratio %6.2f
+
+. gsort -rate_2025
+
+. list region rate_2025 sinadef_rate ratio hom, noobs
+
+  +-------------------------------------------------------------+
+  |                  region   rat~2025   sinade~e   ratio   hom |
+  |-------------------------------------------------------------|
+  |           Madre de Dios       24.6      37.80    1.54    70 |
+  | Prov. Const. del Callao       23.6      18.49    0.78   193 |
+  |             Region Lima       23.1      16.69    0.72   162 |
+  |                  Tumbes       20.6      31.47    1.53    79 |
+  |                    Puno       14.8       5.56    0.38    65 |
+  |-------------------------------------------------------------|
+  |             La Libertad       14.5      11.99    0.83   239 |
+  |      Lima Metropolitana       11.4       7.25    0.64   696 |
+  |                   Pasco       10.8       2.97    0.28     7 |
+  |                     Ica       10.8       9.15    0.85    93 |
+  |                 Huanuco       10.5       3.50    0.33    27 |
+  |-------------------------------------------------------------|
+  |                   Junin       10.1       1.76    0.17    24 |
+  |                   Piura       10.1       7.52    0.74   157 |
+  |              San Martin        9.8       3.37    0.34    32 |
+  |                Arequipa        9.2       3.11    0.34    54 |
+  |                  Ancash        7.2       3.95    0.55    46 |
+  |-------------------------------------------------------------|
+  |                   Cusco        6.9       3.94    0.57    51 |
+  |              Lambayeque        6.4       2.42    0.38    33 |
+  |                Moquegua          6       1.67    0.28     3 |
+  |               Cajamarca        5.3       3.63    0.68    52 |
+  |            Huancavelica        5.3       2.21    0.42     8 |
+  |-------------------------------------------------------------|
+  |                 Ucayali        5.1       5.12    1.00    30 |
+  |                Amazonas        4.1       1.77    0.43     8 |
+  |                Ayacucho          4       4.28    1.07    29 |
+  |                Apurimac        3.8       2.69    0.71    12 |
+  |                  Loreto        3.4       3.07    0.90    31 |
+  |-------------------------------------------------------------|
+  |                   Tacna        3.3       4.40    1.33    16 |
+  +-------------------------------------------------------------+
+
+. correlate rate_2025 sinadef_rate
+(obs=26)
+
+             | rat~2025 sinade~e
+-------------+------------------
+   rate_2025 |   1.0000
+sinadef_rate |   0.8373   1.0000
+
+
+. display as text "Correlation of regional rates, CEIC vs SINADEF (2025): " %5.3f r(rho)
+Correlation of regional rates, CEIC vs SINADEF (2025): 0.837
+
+. spearman rate_2025 sinadef_rate
+
+Number of observations =     26
+        Spearman's rho = 0.6311
+
+Test of H0: rate_2025 and sinadef_rate are independent
+                  Prob = 0.0007
+
+. display as text "Rank correlation: " %5.3f r(rho)
+Rank correlation: 0.631
+
+. assert _N == 26
+
+. save "$est/bench_region2025.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/estimates/bench_region2025.dta saved
+
+. display as text "41_benchmarks: done"
+41_benchmarks: done
+
+. 
+end of do-file

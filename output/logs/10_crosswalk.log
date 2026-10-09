@@ -1,0 +1,185 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L10_crosswalk
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/10_crosswalk.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:54:03
+
+. *=====================================================================
+. * 10_crosswalk.do - RENIEC <-> INEI district ubigeo crosswalk
+. *
+. * Input : $raw/ubigeo_crosswalk/ubigeo_distrito.csv (Castagnetto, MIT)
+. *         $raw/ubigeo_crosswalk/concytec_equivalencia-ubigeos-oti-concytec.csv
+. * Output: $der/geo/crosswalk_reniec_inei.dta (one row per INEI district)
+. *
+. * SINADEF residence codes are RENIEC-coded; census and SIDPOL use INEI.
+. * The four 2025 districts missing here (120307, 130112, 160405, 180107)
+. * are matched by name in 14_sinadef_panel.do.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. *---- Main crosswalk --------------------------------------------------
+. * Some quoted capital names contain line breaks, hence bindquote(strict)
+. import delimited "$raw/ubigeo_crosswalk/ubigeo_distrito.csv", clear ///
+>     varnames(1) stringcols(1 2) encoding("utf-8") bindquote(strict)
+(20 vars, 1,893 obs)
+
+. assert _N == 1893
+
+. keep inei reniec departamento provincia distrito altitude latitude longitude superficie
+
+. 
+. * Two rows carry "NA" codes in the source (checked 2026-09-30):
+. * - San Antonio (Mariscal Nieto, Moquegua) has RENIEC 170107 but no INEI
+. *   code. The 2025 census lists it as INEI 180107, so assign that code.
+. * - Santa Maria de Huachipa (INEI 150144) has no RENIEC code and is not
+. *   in the 2025 census district list, so drop it.
+. assert inei == "NA" if departamento == "MOQUEGUA" & provincia == "MARISCAL NIETO" & distrito == "SAN ANTONIO"
+
+. replace inei = "180107" if departamento == "MOQUEGUA" & provincia == "MARISCAL NIETO" & distrito == "SAN ANTONIO"
+(1 real change made)
+
+. assert reniec == "NA" if inei == "150144"
+
+. drop if inei == "150144"
+(1 observation deleted)
+
+. assert ustrregexm(inei, "^[0-9]{6}$") & ustrregexm(reniec, "^[0-9]{6}$")
+
+. isid inei
+
+. isid reniec
+
+. rename (altitude latitude longitude superficie) (alt_capital lat_capital lon_capital area_km2)
+
+. label variable alt_capital "Altitude of district capital, m (Castagnetto; source undocumented)"
+
+. tempfile main
+
+. save `main'
+file C:\Users\DDelgado\AppData\Local\Temp\ST_9874_000002.tmp saved as .dta format
+
+. 
+. *---- Cross-check against CONCYTEC ------------------------------------
+. * Result of the check on 2026-09-30: the two sources differ for 47
+. * districts. For 46, SINADEF residence records pair the Castagnetto RENIEC
+. * code with the district's own name, and the CONCYTEC code with no record
+. * of it. The 47th, 150706 Cuenca (Huarochiri), appears in SINADEF under
+. * code 140606 with the name of its capital, San Jose de los Chorrillos.
+. * The differences come from CONCYTEC (last updated May 2021): it has no
+. * RENIEC code for districts created since, and uses the older INEI
+. * numbering in Tayacaja and Putumayo. Castagnetto stays the main source.
+. import delimited "$raw/ubigeo_crosswalk/concytec_equivalencia-ubigeos-oti-concytec.csv", ///
+>     clear varnames(1) stringcols(_all) encoding("latin1")
+(18 vars, 1,876 obs)
+
+. keep cod_ubigeo_inei cod_ubigeo_reniec
+
+. rename (cod_ubigeo_inei cod_ubigeo_reniec) (inei reniec_concytec)
+
+. * Missing codes are written as padded "NA" (e.g., "    NA")
+. replace inei = ustrtrim(inei)
+(2 real changes made)
+
+. replace reniec_concytec = ustrtrim(reniec_concytec)
+(39 real changes made)
+
+. replace inei = "" if inei == "NA"
+(2 real changes made)
+
+. replace reniec_concytec = "" if reniec_concytec == "NA"
+(39 real changes made)
+
+. drop if missing(inei)
+(2 observations deleted)
+
+. duplicates drop
+
+Duplicates in terms of all variables
+
+(0 observations are duplicates)
+
+. * A few INEI codes map to two RENIEC codes in CONCYTEC; list them and
+. * compare on the first one only (this file is a cross-check, not an input)
+. duplicates tag inei, generate(multi)
+
+Duplicates in terms of inei
+
+. list inei reniec_concytec if multi, noobs sepby(inei)
+
+. bysort inei (reniec_concytec): keep if _n == 1
+(0 observations deleted)
+
+. drop multi
+
+. isid inei
+
+. merge 1:1 inei using `main'
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                            22
+        from master                         2  (_merge==1)
+        from using                         20  (_merge==2)
+
+    Matched                             1,872  (_merge==3)
+    -----------------------------------------
+
+. quietly count if _merge == 3 & missing(reniec_concytec)
+
+. display as text "Districts with no RENIEC code in CONCYTEC: " r(N)
+Districts with no RENIEC code in CONCYTEC: 38
+
+. quietly count if _merge == 3 & !missing(reniec_concytec) & reniec != reniec_concytec
+
+. display as text "Districts where the two sources give different RENIEC codes: " r(N)
+Districts where the two sources give different RENIEC codes: 9
+
+. list inei reniec reniec_concytec distrito if _merge == 3 & !missing(reniec_concytec) ///
+>     & reniec != reniec_concytec, noobs
+
+  +------------------------------------------------------+
+  |   inei   reniec   reniec~c                  distrito |
+  |------------------------------------------------------|
+  | 090709   080512     080515                HUARIBAMBA |
+  | 090710   080515     080517              ÑAHUIMPUQUIO |
+  | 090711   080517     080518                     PAZOS |
+  | 090713   080518     080526                  QUISHUAR |
+  | 090714   080519     080520                SALCABAMBA |
+  |------------------------------------------------------|
+  | 090715   080526     080523                SALCAHUASI |
+  | 090716   080520     080525     SAN MARCOS DE ROCCHAC |
+  | 160801   150901     150107                  PUTUMAYO |
+  | 160803   150903     150114   TENIENTE MANUEL CLAVERO |
+  +------------------------------------------------------+
+
+. tab _merge
+
+   Matching result from |
+                  merge |      Freq.     Percent        Cum.
+------------------------+-----------------------------------
+        Master only (1) |          2        0.11        0.11
+         Using only (2) |         20        1.06        1.16
+            Matched (3) |      1,872       98.84      100.00
+------------------------+-----------------------------------
+                  Total |      1,894      100.00
+
+. keep if inlist(_merge, 2, 3)
+(2 observations deleted)
+
+. drop _merge reniec_concytec
+
+. 
+. compress
+  (0 bytes saved)
+
+. isid inei
+
+. save "$der/geo/crosswalk_reniec_inei.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/geo/crosswalk_reniec_inei.dta saved
+
+. display as text "10_crosswalk: " _N " districts saved"
+10_crosswalk: 1892 districts saved
+
+. 
+end of do-file

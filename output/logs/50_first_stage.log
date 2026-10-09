@@ -1,0 +1,148 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L50_first_stage
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/50_first_stage.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:56:57
+
+. *=====================================================================
+. * 50_first_stage.do - instrument relevance (spec 1-2), no outcomes used
+. *
+. * Input : $der/analysis/ld_district.dta
+. * Output: $est/fs_diag.dta (one row per specification)
+. *
+. * First stage: dV on the excluded instruments, pre-period controls and
+. * department fixed effects, weighted by GHSL 2015 population, clustered by
+. * province. With one endogenous regressor, the cluster-robust Wald F on the
+. * excluded instruments equals the Kleibergen-Paap Wald F, and with one
+. * instrument it equals the Montiel Olea-Pflueger effective F (Pflueger and
+. * Wang 2015, p. 7). Report it as a diagnostic, not as a screen
+. * (Andrews, Stock, and Sun 2019, pp. 20-21).
+. *
+. * Altitude (Z3) appears alone only as a diagnostic; the plan uses it only
+. * as an over-identifying instrument (analysis plan, spec 2).
+. * dV is provisional (2025 share) until the 2017 census export exists.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. use "$der/analysis/ld_district.dta", clear
+
+. local X "ltt_lima larea ldens15 lat lon lat2 lon2 latlon pov18"
+
+. capture confirm variable z1_share07
+
+. local haveZ1 = !_rc
+
+. 
+. tempname h
+
+. postfile `h' str12 spec str40 instr str24 sample double(b1 se1 b2 se2 F N G) ///
+>     using "$est/fs_diag.dta", replace
+
+. 
+. local sets "z2_ltt|z3_alt|z2_ltt z3_alt|z2_lkm"
+
+. if `haveZ1' local sets "`sets'|z1_share07|z1_share07 z2_ltt|z1_share07 z3_alt"
+
+. 
+. foreach smp in all nolima {
+  2.     local cond "1"
+  3.     if "`smp'" == "nolima" local cond "!lima_callao"
+  4.     local rest "`sets'"
+  5.     local k 0
+  6.     while "`rest'" != "" {
+  7.         gettoken Z rest : rest, parse("|")
+  8.         if "`Z'" == "|" continue
+  9.         local ++k
+ 10.         quietly reghdfe dv `Z' `X' [aw=w] if `cond', absorb(dept_id) vce(cluster prov_id)
+ 11.         quietly test `Z'
+ 12.         local F = r(F)
+ 13.         local z1 : word 1 of `Z'
+ 14.         local z2 : word 2 of `Z'
+ 15.         local b2 = .
+ 16.         local s2 = .
+ 17.         if "`z2'" != "" {
+ 18.             local b2 = _b[`z2']
+ 19.             local s2 = _se[`z2']
+ 20.         }
+ 21.         post `h' ("spec`k'") ("`Z'") ("`smp'") (_b[`z1']) (_se[`z1']) (`b2') (`s2') ///
+>             (`F') (e(N)) (e(N_clust))
+ 22.         display as text %-8s "`smp'" %-28s "`Z'" "  F = " %8.2f `F' "  N = " e(N) "  G = " e(N_clust)
+ 23.     }
+ 24. }
+all     z2_ltt                        F =     3.46  N = 1864  G = 196
+all     z3_alt                        F =    17.90  N = 1864  G = 196
+all     z2_ltt z3_alt                 F =     9.16  N = 1864  G = 196
+all     z2_lkm                        F =     1.43  N = 1864  G = 196
+nolima  z2_ltt                        F =     0.67  N = 1814  G = 194
+nolima  z3_alt                        F =    36.71  N = 1814  G = 194
+nolima  z2_ltt z3_alt                 F =    19.56  N = 1814  G = 194
+nolima  z2_lkm                        F =     0.04  N = 1814  G = 194
+
+. * Diagnostic: Z2 without the travel-time-to-Lima control (Lima lies on
+. * the route from Tumbes, so the two travel times are correlated)
+. local dropc "ltt_lima"
+
+. local Xnl : list X - dropc
+
+. display as text "Controls without Lima travel time: `Xnl'"
+Controls without Lima travel time: larea ldens15 lat lon lat2 lon2 latlon pov18
+
+. foreach smp in all nolima {
+  2.     local cond "1"
+  3.     if "`smp'" == "nolima" local cond "!lima_callao"
+  4.     foreach Z in z2_ltt z2_lkm {
+  5.         quietly reghdfe dv `Z' `Xnl' [aw=w] if `cond', absorb(dept_id) vce(cluster prov_id)
+  6.         quietly test `Z'
+  7.         local F = r(F)
+  8.         post `h' ("noLimaCtl") ("`Z'") ("`smp'") (_b[`Z']) (_se[`Z']) (.) (.) ///
+>             (`F') (e(N)) (e(N_clust))
+  9.         display as text %-8s "`smp'" %-28s "`Z' (no Lima control)" "  F = " %8.2f `F'
+ 10.     }
+ 11. }
+all     z2_ltt (no Lima control)      F =     1.98
+all     z2_lkm (no Lima control)      F =     1.04
+nolima  z2_ltt (no Lima control)      F =     0.85
+nolima  z2_lkm (no Lima control)      F =     0.08
+
+. quietly correlate z2_ltt ltt_lima [aw=w]
+
+. display as text "Correlation of log travel time to CEBAF and to Lima: " %5.3f r(rho)
+Correlation of log travel time to CEBAF and to Lima: -0.008
+
+. postclose `h'
+
+. 
+. use "$est/fs_diag.dta", clear
+
+. format b1 se1 b2 se2 %9.4f
+
+. format F %9.2f
+
+. list, noobs sepby(sample)
+
+  +-----------------------------------------------------------------------------------------------+
+  |      spec           instr   sample        b1      se1        b2      se2       F      N     G |
+  |-----------------------------------------------------------------------------------------------|
+  |     spec1          z2_ltt      all    2.2172   1.1924         .        .    3.46   1864   196 |
+  |     spec2          z3_alt      all   -0.4342   0.1026         .        .   17.90   1864   196 |
+  |     spec3   z2_ltt z3_alt      all    2.4941   1.2962   -0.4447   0.1041    9.16   1864   196 |
+  |     spec4          z2_lkm      all    0.3925   0.3286         .        .    1.43   1864   196 |
+  |-----------------------------------------------------------------------------------------------|
+  |     spec1          z2_ltt   nolima    0.7790   0.9497         .        .    0.67   1814   194 |
+  |     spec2          z3_alt   nolima   -0.2677   0.0442         .        .   36.71   1814   194 |
+  |     spec3   z2_ltt z3_alt   nolima    0.9976   1.0124   -0.2732   0.0438   19.56   1814   194 |
+  |     spec4          z2_lkm   nolima    0.0418   0.2055         .        .    0.04   1814   194 |
+  |-----------------------------------------------------------------------------------------------|
+  | noLimaCtl          z2_ltt      all    1.9405   1.3800         .        .    1.98   1864   196 |
+  | noLimaCtl          z2_lkm      all    0.3930   0.3857         .        .    1.04   1864   196 |
+  |-----------------------------------------------------------------------------------------------|
+  | noLimaCtl          z2_ltt   nolima    0.8829   0.9552         .        .    0.85   1814   194 |
+  | noLimaCtl          z2_lkm   nolima    0.0581   0.2083         .        .    0.08   1814   194 |
+  +-----------------------------------------------------------------------------------------------+
+
+. display as text "50_first_stage: done (dV provisional if 2017 census missing)"
+50_first_stage: done (dV provisional if 2017 census missing)
+
+. 
+end of do-file

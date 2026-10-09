@@ -1,0 +1,122 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  L16_poverty2018
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/16_poverty2018.log
+  log type:  text
+ opened on:  30 Sep 2026, 10:56:38
+
+. *=====================================================================
+. * 16_poverty2018.do - INEI district poverty map 2018 (pre-period control)
+. *
+. * Input : $raw/poverty_map_2018/Anexo_Estadistico.xlsx, sheet Anexo2
+. *         (ubigeo, suffix, name, projected 2020 population, 95% interval
+. *          of total monetary poverty, poverty rank)
+. * Output: $der/controls/poverty2018.dta
+. *
+. * INEI publishes intervals, not point estimates; pov18 is the midpoint.
+. *=====================================================================
+. if "$root" == "" exit 198
+
+. 
+. import excel using "$raw/poverty_map_2018/Anexo_Estadistico.xlsx", sheet("Anexo2") clear allstring
+(7 vars, 2,159 obs)
+
+. keep if ustrregexm(A, "^[0-9]{6}$") & substr(A, 5, 2) != "00"
+(285 observations deleted)
+
+. keep A B D E F G
+
+. rename (A B D E F G) (ubigeo suffix pop2020 pov18_lo pov18_hi pov18_rank)
+
+. destring pop2020 pov18_lo pov18_hi pov18_rank, replace
+pop2020: all characters numeric; replaced as long
+pov18_lo: all characters numeric; replaced as double
+pov18_hi: all characters numeric; replaced as double
+pov18_rank: all characters numeric; replaced as int
+
+. drop if missing(pov18_lo)
+(0 observations deleted)
+
+. generate pov18 = (pov18_lo + pov18_hi) / 2
+
+. assert inrange(pov18_lo, 0, 100) & inrange(pov18_hi, 0, 100) & pov18_lo <= pov18_hi
+
+. label variable pov18 "Total monetary poverty 2018, % (midpoint of INEI 95% interval)"
+
+. duplicates report ubigeo
+
+Duplicates in terms of ubigeo
+
+--------------------------------------
+   Copies | Observations       Surplus
+----------+---------------------------
+        1 |         1874             0
+--------------------------------------
+
+. isid ubigeo
+
+. 
+. merge 1:1 ubigeo using "$der/geo/geo_harmonized.dta", keepusing(ubigeo)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                            19
+        from master                         0  (_merge==1)
+        from using                         19  (_merge==2)
+
+    Matched                             1,874  (_merge==3)
+    -----------------------------------------
+
+. quietly count if _merge == 2
+
+. display as text "2025 districts without a 2018 poverty estimate: " r(N)
+2025 districts without a 2018 poverty estimate: 19
+
+. if r(N) tab ubigeo if _merge == 2
+
+                                 ubigeo |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                                 030612 |          1        5.26        5.26
+                                 050413 |          1        5.26       10.53
+                                 050512 |          1        5.26       15.79
+                                 050513 |          1        5.26       21.05
+                                 050514 |          1        5.26       26.32
+                                 050515 |          1        5.26       31.58
+                                 080915 |          1        5.26       36.84
+                                 080916 |          1        5.26       42.11
+                                 080917 |          1        5.26       47.37
+                                 080918 |          1        5.26       52.63
+                                 090724 |          1        5.26       57.89
+                                 090725 |          1        5.26       63.16
+                                 120307 |          1        5.26       68.42
+                                 130112 |          1        5.26       73.68
+                                 160405 |          1        5.26       78.95
+                                 180107 |          1        5.26       84.21
+                                 221006 |          1        5.26       89.47
+                                 250306 |          1        5.26       94.74
+                                 250307 |          1        5.26      100.00
+----------------------------------------+-----------------------------------
+                                  Total |         19      100.00
+
+. quietly count if _merge == 1
+
+. display as text "2018 poverty districts not in the 2025 list: " r(N)
+2018 poverty districts not in the 2025 list: 0
+
+. keep if _merge == 3
+(19 observations deleted)
+
+. drop _merge
+
+. compress
+  variable ubigeo was str280 now str6
+  variable suffix was str15 now str3
+  (535,964 bytes saved)
+
+. save "$der/controls/poverty2018.dta", replace
+file C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/data/derived/controls/poverty2018.dta saved
+
+. display as text "16_poverty2018: " _N " districts"
+16_poverty2018: 1874 districts
+
+. 
+end of do-file

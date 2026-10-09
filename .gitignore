@@ -8,3 +8,18 @@ data/SINADEF_DATOS_ABIERTOS.csv
 # Office lock files and Python cache
 ~$*
 __pycache__/
+
+# Stata: pinned user-written packages (versions logged in output/logs/package_versions.log)
+code/ado/
+# Derived intermediates
+data/derived/tmp/
+
+# Stata batch log from the repository root (stage logs are in output/logs)
+master.log
+
+# New raw files over 50 MB (2026-09-30); re-download with code/gis/16_download_gis.py
+# or the URLs in data/SOURCES.md
+data/raw/osm/peru-170101-free.shp.zip
+data/raw/osm/peru-170101/gis_osm_roads_free_1.shp
+data/raw/osm/peru-170101/gis_osm_roads_free_1.dbf
+data/raw/pre2017_crime/cap200_denuncias_2016.sav

@@ -1,0 +1,149 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  pkgver
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/package_versions.log
+  log type:  text
+ opened on:  30 Sep 2026, 00:44:17
+
+. display "Package versions installed `c(current_date)' in `c(sysdir_plus)'"
+Package versions installed 30 Sep 2026 in C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus/
+
+. ado dir
+
+[1] package ftools from http://fmwww.bc.edu/repec/bocode/f
+      'FTOOLS': module to provide alternatives to common Stata commands optimized for large datasets
+
+[2] package reghdfe from http://fmwww.bc.edu/repec/bocode/r
+      'REGHDFE': module to perform linear or instrumental-variable regression absorbing any number of high-dimensional f
+> ixed effects
+
+[3] package ranktest from http://fmwww.bc.edu/repec/bocode/r
+      'RANKTEST': module to test the rank of a matrix
+
+[4] package ivreg2 from http://fmwww.bc.edu/repec/bocode/i
+      'IVREG2': module for extended instrumental variables/2SLS and GMM estimation
+
+[5] package ivreghdfe from http://fmwww.bc.edu/repec/bocode/i
+      'IVREGHDFE': module for extended instrumental variable regressions with multiple levels of fixed effects
+
+[6] package avar from http://fmwww.bc.edu/repec/bocode/a
+      'AVAR': module to perform asymptotic covariance estimation for iid and non-iid data robust to heteroskedasticity, 
+> autocorrelation, 1- and 2-way clustering, and common cross-panel autocorrelated dis
+
+[7] package moremata from http://fmwww.bc.edu/repec/bocode/m
+      'MOREMATA': module (Mata) to provide various functions
+
+[8] package weakivtest from http://fmwww.bc.edu/repec/bocode/w
+      'WEAKIVTEST': module to perform weak instrument test for a single endogenous regressor in TSLS and LIML
+
+[9] package weakiv from http://fmwww.bc.edu/repec/bocode/w
+      'WEAKIV': module to perform weak-instrument-robust tests and confidence intervals for instrumental-variable (IV) e
+> stimation of linear, probit and tobit models
+
+[10] package boottest from http://fmwww.bc.edu/repec/bocode/b
+      'BOOTTEST': module to provide fast execution of the wild bootstrap with null imposed
+
+[11] package ppmlhdfe from http://fmwww.bc.edu/repec/bocode/p
+      'PPMLHDFE': module for Poisson pseudo-likelihood regression with multiple levels of fixed effects
+
+[12] package hdfe from http://fmwww.bc.edu/repec/bocode/h
+      'HDFE': module to partial out variables with respect to a set of fixed effects
+
+[13] package acreg from http://fmwww.bc.edu/repec/bocode/a
+      'ACREG': module to perform Arbitrary Correlation Regression
+
+[14] package mvtnorm from http://fmwww.bc.edu/repec/bocode/m
+      'MVTNORM': module to work with the multivariate normal and multivariate t distributions, with and without variable
+>  truncation
+
+[15] package plausexog from http://fmwww.bc.edu/repec/bocode/p
+      'PLAUSEXOG': module to implement Conley et al's plausibly exogenous bounds
+
+[16] package rwolf from http://fmwww.bc.edu/repec/bocode/r
+      'RWOLF': module to calculate Romano-Wolf stepdown p-values for multiple hypothesis testing
+
+[17] package did_multiplegt_stat from http://fmwww.bc.edu/repec/bocode/d
+      'DID_MULTIPLEGT_STAT': module for heterogeneity-robust difference-in differences (DID) estimators
+
+[18] package did_multiplegt_dyn from http://fmwww.bc.edu/repec/bocode/d
+      'DID_MULTIPLEGT_DYN': module to estimate event-study Difference-in-Difference (DID) estimators in designs with mul
+> tiple groups and periods, with a potentially non-binary treatment that may increase
+
+[19] package jwdid from http://fmwww.bc.edu/repec/bocode/j
+      'JWDID': module to estimate Difference-in-Difference models using Mundlak approach
+
+[20] package gtools from http://fmwww.bc.edu/repec/bocode/g
+      'GTOOLS': module to provide a fast implementation of common group commands
+
+[21] package estout from http://fmwww.bc.edu/repec/bocode/e
+      'ESTOUT': module to make regression tables
+
+[22] package coefplot from http://fmwww.bc.edu/repec/bocode/c
+      'COEFPLOT': module to plot regression coefficients and other results
+
+[23] package spmap from http://fmwww.bc.edu/repec/bocode/s
+      'SPMAP': module to visualize spatial data
+
+[24] package shp2dta from http://fmwww.bc.edu/repec/bocode/s
+      'SHP2DTA': module to converts shape boundary files to Stata datasets
+
+[25] package geonear from http://fmwww.bc.edu/repec/bocode/g
+      'GEONEAR': module to find nearest neighbors using geodetic distances
+
+[26] package ritest from http://fmwww.bc.edu/repec/bocode/r
+      'RITEST': module to perform randomization inference and permutation tests
+
+[27] package ivppmlhdfe from https://raw.githubusercontent.com/ekwonomist/ivppmlhdfe/main
+      ivppmlhdfe: IV-PPML with High-Dimensional Fixed Effects
+
+[28] package scpc from https://raw.githubusercontent.com/ukmueller/SCPC/master/src
+      'scpc': Spatial Correlation Robust Inference.
+
+[29] package honestdid from https://raw.githubusercontent.com/mcaceresb/stata-honestdid/main
+      ^
+
+[30] package require from http://fmwww.bc.edu/repec/bocode/r
+      'REQUIRE': module to ensure that installed packages have a minimum or exact version.
+
+[31] package spur from https://raw.githubusercontent.com/pdavidboll/SPUR/main
+      'spur': Spatial Unit Roots in Regressions
+
+[32] package binsreg from https://raw.githubusercontent.com/nppackages/binsreg/master/stata
+      STATA Package: BINSREG PACKAGE
+
+. foreach p in reghdfe ivreghdfe ivreg2 ppmlhdfe boottest acreg weakivtest {
+  2.     capture noisily which `p'
+  3. }
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\r\reghdfe.ado
+*! version 6.13.1 10Jan2026
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\i\ivreghdfe.ado
+*! ivreghdfe 1.1.4  29nov2025 (bugfix for github issue #61)
+*! ivreghdfe 1.1.3  04Jan2023 (bugfix for github issue #48)
+*! ivreghdfe 1.1.2  29Sep2022 (bugfix for github issue #44)
+*! ivreghdfe 1.1.1  14Dec2021 (experimental -margins- support)
+*! ivreghdfe 1.1.0  25Feb2021
+*! ivreg2 4.1.11  22Nov2019
+*! authors cfb & mes
+*! see end of file for version comments
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\i\ivreg2.ado
+*! ivreg2 4.1.12  14aug2024
+*! authors cfb & mes
+*! see end of file for version comments
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\p\ppmlhdfe.ado
+*! version 2.3.3 02nov2025
+*! Authors: Sergio Correia, Paulo Guimarães, Thomas Zylkin
+*! URL: https://github.com/sergiocorreia/ppmlhdfe
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\b\boottest.ado
+*! boottest 4.5.3 5 June 2026
+*! Copyright (C) 2015-26 David Roodman
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\a\acreg.ado
+*! Version December 2020  (1.1.0)
+*! ACREG: Arbitrary Correlation Regression
+*! Authors: F. Colella, R. Lalive, S.O. Sakalli, M. Thoenig
+C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/code/ado/plus\w\weakivtest.ado
+
+. log close pkgver
+      name:  pkgver
+       log:  C:\Users\DDelgado\Documents\GitHub\Crime-and-Migration/output/logs/package_versions.log
+  log type:  text
+ closed on:  30 Sep 2026, 00:44:17
+------------------------------------------------------------------------------------------------------------------------
